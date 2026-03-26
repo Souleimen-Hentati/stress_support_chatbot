@@ -1,16 +1,5 @@
 # Python environments
 .venv/
-venv/
-pfa/
-
-# Secrets and local env files
-.env
-.env.*
-server/.env
-client/.env
-!.env.example
-!server/.env.example
-!client/.env.example
 
 # Python cache/build
 __pycache__/
@@ -24,18 +13,3 @@ dist/
 
 # Tooling and editor
 .vscode/
-.idea/
-
-# Runtime data / generated indexes
-server/vectorstore/
-server/routes/uploaded_docs/
-uploaded_docs/
-
-# Local logs and notebooks
-*.log
-.ipynb_checkpoints/
-
-# Project docs not needed for deployment
-Internship_Report_MediBot.md
-Internship_Report_MediBot_University_Style.md
-pfa_planning.txt
