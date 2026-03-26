@@ -1,5 +1,3 @@
-"""API endpoint for stress-support chatbot conversations."""
-
 import asyncio
 from typing import Any
 from fastapi import APIRouter, Form
@@ -19,7 +17,6 @@ from modules.rag import (
 from loggger import logger
 import re
 
-# Create API router for this endpoint group
 router = APIRouter()
 
 SIMPLE_PATTERNS = [
@@ -36,59 +33,49 @@ CRISIS_PATTERNS = [
 ]
 
 def is_simple_query(query: str) -> bool:
-    """Check if query is a simple conversational phrase."""
     query_lower = query.lower().strip()
     for pattern in SIMPLE_PATTERNS:
         if re.match(pattern, query_lower):
             return True
     return False
 
-
 def has_crisis_language(query: str) -> bool:
-    """Detect explicit crisis language requiring immediate escalation guidance."""
     query_lower = query.lower().strip()
     return any(re.search(pattern, query_lower) for pattern in CRISIS_PATTERNS)
 
 def get_simple_response(query: str) -> dict:
-    """Generate immediate response for simple conversational queries."""
     query_lower = query.lower().strip()
     
-    # Greeting responses
     if re.match(r'^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening)|howdy)', query_lower):
         return {
             "response": "Hello! I'm MediBot, your stress support assistant. I'm here to help you manage stress with practical, supportive steps. How are you feeling today?",
             "sources": []
         }
     
-    # How are you
     if re.match(r'^(how\s+are\s+you|what\'?s\s+up|sup)', query_lower):
         return {
             "response": "Thank you for asking. I'm here to support you with stress and emotional wellbeing. What feels most stressful right now?",
             "sources": []
         }
     
-    # Thanks
     if re.match(r'^(thanks?|thank\s+you|thx)', query_lower):
         return {
             "response": "You're welcome! Feel free to ask if you have any more questions.",
             "sources": []
         }
     
-    # Goodbye
     if re.match(r'^(bye|goodbye|see\s+you|later)', query_lower):
         return {
             "response": "Goodbye. Take care of yourself, and come back anytime you need support.",
             "sources": []
         }
     
-    # Yes/No/OK
     if re.match(r'^(yes|no|ok|okay|sure|alright)', query_lower):
         return {
             "response": "I understand. If you want, I can help you with one simple stress-reduction step right now.",
             "sources": []
         }
     
-    # Default
     return {
         "response": "I'm here to support you. Share what has been stressful lately, and we can work through it together.",
         "sources": []
@@ -96,7 +83,6 @@ def get_simple_response(query: str) -> dict:
 
 @router.post("/ask_questions")
 async def ask_questions(question: str = Form(...)):
-    """Process user messages and return stress-support chatbot responses."""
     try:
         logger.info(f"User query: {question}")
 
@@ -132,10 +118,8 @@ async def ask_questions(question: str = Form(...)):
         logger.exception("Error during question processing")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-
 @router.post("/ask_questions_compare")
 async def ask_questions_compare(question: str = Form(...)):
-    """Run the same query across configured models for side-by-side comparison."""
     try:
         logger.info(f"Compare query: {question}")
 
@@ -201,10 +185,8 @@ async def ask_questions_compare(question: str = Form(...)):
         logger.exception("Error during compare processing")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-
 @router.post("/ask_questions_rag_chain")
 async def ask_questions_rag_chain(question: str = Form(...)):
-    """Phase 1 endpoint: run only RAG chain strategy (agent deferred)."""
     try:
         logger.info(f"RAG chain query: {question}")
 
@@ -257,10 +239,8 @@ async def ask_questions_rag_chain(question: str = Form(...)):
         logger.exception("Error during RAG chain processing")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-
 @router.post("/ask_questions_rag_compare")
 async def ask_questions_rag_compare(question: str = Form(...)):
-    """Phase 2 endpoint: compare chain and agent RAG strategies side by side."""
     try:
         logger.info(f"RAG strategy compare query: {question}")
 
