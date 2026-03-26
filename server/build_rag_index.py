@@ -1,7 +1,4 @@
-"""Build FAISS RAG index from files in configured document folders."""
-
 from modules.rag import build_rag_index
-
 
 if __name__ == "__main__":
     success = build_rag_index()
