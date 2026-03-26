@@ -1,25 +1,15 @@
-"""LLM configuration for stress-support chatbot responses."""
-
 import os
 from pathlib import Path
 from typing import Any
-
 from dotenv import load_dotenv
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
-
 from loggger import logger
 
-# Ensure server/.env is loaded even when running from workspace root.
 env_path = Path(__file__).resolve().parent.parent / ".env"
-# Override any stale env vars so updates in server/.env take effect.
 load_dotenv(dotenv_path=env_path, override=True)
 
-# ===========================
-# LOAD CONFIGURATION
-# ===========================
 def _get_provider() -> str:
-    """Return normalized provider identifier."""
     provider_raw = os.getenv("LLM_PROVIDER", "openai_compatible").strip().lower()
     aliases = {
         "openai": "openai_compatible",
@@ -29,25 +19,19 @@ def _get_provider() -> str:
     }
     return aliases.get(provider_raw, provider_raw)
 
-
 def _default_model_for_provider(provider: str) -> str:
-    """Provide sensible default model IDs per provider."""
     if provider == "anthropic":
         return "claude-3-5-sonnet-latest"
     return "openai/gpt-4o-mini"
 
-
 def _get_primary_model(provider: str) -> str:
-    """Resolve primary model with backward compatibility for old env names."""
     return (
         os.getenv("PRIMARY_MODEL")
         or os.getenv("MISTRAL_MODEL")
         or _default_model_for_provider(provider)
     )
 
-
 def _is_model_unavailable_error(err_text: str) -> bool:
-    """Detect model-availability errors that should trigger fallback."""
     lowered = err_text.lower()
     markers = [
         "no endpoints found",
@@ -60,9 +44,7 @@ def _is_model_unavailable_error(err_text: str) -> bool:
     ]
     return any(marker in lowered for marker in markers)
 
-
 def _get_model_candidates() -> list[str]:
-    """Build ordered model candidates list: primary first, then fallbacks."""
     provider = _get_provider()
     primary_model = _get_primary_model(provider)
     fallbacks_raw = os.getenv("FALLBACK_MODELS", primary_model)
@@ -73,9 +55,7 @@ def _get_model_candidates() -> list[str]:
             candidates.append(model)
     return candidates
 
-
 def get_compare_models() -> list[str]:
-    """Return ordered unique list of models used for side-by-side comparison."""
     configured = os.getenv(
         "COMPARE_MODELS",
         "openai/gpt-4o-mini,openai/gpt-4.1-mini,google/gemini-1.5-pro",
@@ -104,7 +84,6 @@ Safety rules:
 
 
 def get_chat_llm(model_name: str) -> Any:
-    """Build and return the chat model client for a specific model."""
     provider = _get_provider()
 
     if provider == "anthropic":
@@ -133,16 +112,12 @@ def get_chat_llm(model_name: str) -> Any:
         temperature=0.4,
     )
 
-
 def invoke_specific_model(messages: list[dict[str, str]], model_name: str) -> str:
-    """Invoke exactly one model without fallback behavior."""
     llm = get_chat_llm(model_name)
     completion = llm.invoke(messages)
     return getattr(completion, "content", str(completion))
 
-
 def invoke_with_model_fallback(messages: list[dict[str, str]]) -> str:
-    """Invoke the chat model with fallback model IDs when endpoints are unavailable."""
     provider = _get_provider()
     last_error: Exception | None = None
     for model_name in _get_model_candidates():
@@ -165,12 +140,10 @@ def invoke_with_model_fallback(messages: list[dict[str, str]]) -> str:
 
 
 def get_stress_support_response(question: str) -> str:
-    """Generate a supportive stress-focused chatbot response."""
     messages = [
         {"role": "system", "content": SAFETY_SYSTEM_PROMPT},
         {"role": "user", "content": question},
     ]
-
     return invoke_with_model_fallback(messages)
 
 
