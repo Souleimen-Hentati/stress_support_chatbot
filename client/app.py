@@ -1,9 +1,3 @@
-"""
-Main Streamlit application for MediBot - Stress Support Assistant
-This file serves as the entry point for the chatbot UI.
-It orchestrates the layout and renders all major components.
-"""
-
 import streamlit as st
 from components.history_download import render_history_download
 from components.chatUI import render_chat_ui
@@ -69,9 +63,7 @@ with col2:
     st.markdown("<div class='subtitle'>AI-Powered Stress Support Assistant</div>", unsafe_allow_html=True)
 
 st.info("⚠️ MediBot provides emotional support for stress management and is not a replacement for professional care or emergency services.")
-
 st.markdown("---")
 
 render_chat_ui()
-
 render_history_download()
