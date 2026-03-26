@@ -1,18 +1,13 @@
-"""RAG utilities for grounded stress-support responses."""
-
 from __future__ import annotations
-
 import json
 import os
 import re
 from pathlib import Path
 from typing import Any
-
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
-
 from loggger import logger
 from modules.llm import SAFETY_SYSTEM_PROMPT, invoke_with_model_fallback
 
@@ -53,9 +48,7 @@ CONTEXT:
 {context}
 """.strip()
 
-
 def _safe_int_env(name: str, default: int) -> int:
-    """Read int env var safely with fallback."""
     raw = os.getenv(name)
     if raw is None:
         return default
@@ -65,9 +58,7 @@ def _safe_int_env(name: str, default: int) -> int:
         logger.warning(f"Invalid integer env value for {name}: {raw}. Using {default}.")
         return default
 
-
 def _safe_float_env(name: str, default: float) -> float:
-    """Read float env var safely with fallback."""
     raw = os.getenv(name)
     if raw is None:
         return default
@@ -77,9 +68,7 @@ def _safe_float_env(name: str, default: float) -> float:
         logger.warning(f"Invalid float env value for {name}: {raw}. Using {default}.")
         return default
 
-
 def _get_doc_dirs() -> list[Path]:
-    """Return candidate document folders for building/loading the RAG index."""
     configured = os.getenv("RAG_DOC_DIRS", "uploaded_docs,server/uploaded_docs")
     dirs: list[Path] = []
     for raw_path in configured.split(","):
@@ -92,9 +81,7 @@ def _get_doc_dirs() -> list[Path]:
         dirs.append(path)
     return dirs
 
-
 def _collect_source_files() -> list[Path]:
-    """Collect supported source files for indexing."""
     files: list[Path] = []
     for doc_dir in _get_doc_dirs():
         if not doc_dir.exists() or not doc_dir.is_dir():
@@ -102,7 +89,6 @@ def _collect_source_files() -> list[Path]:
         for ext in ("*.pdf", "*.txt", "*.md"):
             files.extend(sorted(doc_dir.glob(ext)))
     return files
-
 
 def _load_documents() -> list[Any]:
     """Load documents from supported source files."""
@@ -122,7 +108,6 @@ def _load_documents() -> list[Any]:
 
 
 def _get_embeddings_client() -> OpenAIEmbeddings:
-    """Build embeddings client using OpenAI-compatible endpoint."""
     api_key = os.getenv("EMBEDDING_API_KEY") or os.getenv("OPENAI_API_KEY")
     base_url = os.getenv("EMBEDDING_BASE_URL") or os.getenv("OPENAI_BASE_URL")
     if not api_key:
@@ -136,9 +121,7 @@ def _get_embeddings_client() -> OpenAIEmbeddings:
         model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
     )
 
-
 def build_rag_index() -> bool:
-    """Build and persist FAISS index from source documents."""
     documents = _load_documents()
     if not documents:
         logger.warning("RAG index build skipped: no documents found")
@@ -159,9 +142,7 @@ def build_rag_index() -> bool:
     logger.info(f"RAG index built with {len(chunks)} chunks at: {VECTORSTORE_DIR}")
     return True
 
-
 def _load_vectorstore() -> FAISS | None:
-    """Load persisted FAISS vectorstore if available."""
     if not VECTORSTORE_DIR.exists():
         return None
     try:
@@ -176,7 +157,6 @@ def _load_vectorstore() -> FAISS | None:
 
 
 def _sanitize_source(source: str) -> str:
-    """Return display-safe source identifier (avoid leaking full local paths)."""
     if not source:
         return "unknown"
     normalized = source.replace("\\", "/").strip()
@@ -184,9 +164,7 @@ def _sanitize_source(source: str) -> str:
         return normalized.split("/")[-1]
     return normalized
 
-
 def _format_sources(docs: list[Any]) -> list[dict[str, Any]]:
-    """Normalize retrieved document metadata for API output."""
     formatted: list[dict[str, Any]] = []
     seen: set[tuple[str, int | None]] = set()
 
@@ -202,9 +180,7 @@ def _format_sources(docs: list[Any]) -> list[dict[str, Any]]:
 
     return formatted
 
-
 def _retrieve_docs(db: FAISS, query: str, k: int) -> list[Any]:
-    """Retrieve docs using configurable strategy for chain mode."""
     search_type = os.getenv("RAG_SEARCH_TYPE", "mmr").strip().lower()
 
     if search_type == "similarity":
@@ -219,7 +195,6 @@ def _retrieve_docs(db: FAISS, query: str, k: int) -> list[Any]:
             logger.warning(f"Threshold retrieval failed, falling back to similarity search: {exc}")
             return db.similarity_search(query, k=k)
 
-    # Default to MMR for more diverse retrieval context.
     fetch_k = max(k * 3, k)
     try:
         return db.max_marginal_relevance_search(query, k=k, fetch_k=fetch_k)
@@ -227,9 +202,7 @@ def _retrieve_docs(db: FAISS, query: str, k: int) -> list[Any]:
         logger.warning(f"MMR retrieval failed, falling back to similarity search: {exc}")
         return db.similarity_search(query, k=k)
 
-
 def _build_context(docs: list[Any]) -> str:
-    """Build bounded context text from retrieved docs."""
     max_snippet_chars = _safe_int_env("RAG_MAX_SNIPPET_CHARS", 1200)
     max_context_chars = _safe_int_env("RAG_MAX_CONTEXT_CHARS", 6000)
 
@@ -253,9 +226,7 @@ def _build_context(docs: list[Any]) -> str:
 
     return "\n\n".join(blocks)
 
-
 def _extract_agent_decision(decision_text: str) -> tuple[bool, str]:
-    """Parse planner output into (need_more_context, followup_query)."""
     default = (False, "")
     text = (decision_text or "").strip()
     if not text:
@@ -279,9 +250,7 @@ def _extract_agent_decision(decision_text: str) -> tuple[bool, str]:
     followup_query = str(payload.get("followup_query", "") or "").strip()
     return need_more, followup_query
 
-
 def _merge_docs(first: list[Any], second: list[Any], max_docs: int) -> list[Any]:
-    """Merge two document lists with metadata-based deduplication."""
     seen: set[tuple[str, str]] = set()
     merged: list[Any] = []
 
@@ -299,14 +268,11 @@ def _merge_docs(first: list[Any], second: list[Any], max_docs: int) -> list[Any]
 
     return merged
 
-
 def get_stress_support_rag_messages(
     question: str,
 ) -> tuple[list[dict[str, str]], list[dict[str, Any]], bool]:
-    """Return (messages, sources, used_rag) for downstream model invocation."""
     db = _load_vectorstore()
     if db is None:
-        # Try one lazy build attempt at runtime if index does not exist yet.
         if build_rag_index():
             db = _load_vectorstore()
 
@@ -330,31 +296,17 @@ def get_stress_support_rag_messages(
     ]
     return messages, _format_sources(docs), True
 
-
 def get_stress_support_rag_response(question: str) -> tuple[str, list[dict[str, Any]], bool]:
-    """
-    Return (answer, sources, used_rag).
-
-    Falls back to non-RAG behavior when index/documents are unavailable.
-    """
     messages, sources, used_rag = get_stress_support_rag_messages(question)
     if not used_rag:
         return "", [], False
     answer = invoke_with_model_fallback(messages)
     return answer, sources, True
 
-
 def get_stress_support_rag_chain_response(question: str) -> tuple[str, list[dict[str, Any]], bool]:
-    """Phase 1 RAG strategy: chain flow (single retrieval pass + synthesis)."""
     return get_stress_support_rag_response(question)
 
-
 def get_stress_support_rag_agent_response(question: str) -> tuple[str, list[dict[str, Any]], bool]:
-    """
-    Phase 2 RAG strategy: agent flow.
-
-    Agent flow performs retrieval planning and can trigger one focused second retrieval pass.
-    """
     db = _load_vectorstore()
     if db is None:
         if build_rag_index():
