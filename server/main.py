@@ -1,8 +1,3 @@
-"""
-FastAPI main application file.
-Sets up the API server, middleware, and routes for the Medical Assistant backend.
-"""
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from middlewares.exception_handlers import catch_exception_middleware
