@@ -1,5 +1,23 @@
+[project]
 name = "pfa-medical-assistant"
 version = "0.1.0"
+description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
+
+[tool.poetry]
+name = "pfa-medical-assistant"
+version = "0.1.0"
+description = "MediBot Streamlit client and backend workspace"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+streamlit = "*"
+requests = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
